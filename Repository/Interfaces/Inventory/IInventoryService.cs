@@ -2,7 +2,7 @@
 
 namespace SimpLedger.Repository.Interface.Inventory
 {
-    public interface IInventoryInterface
+    public interface IInventoryService
     {
         /// <summary>
         ///  A function that will return all items in database

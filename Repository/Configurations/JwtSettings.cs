@@ -1,4 +1,4 @@
-﻿namespace SimpLedger.Repository.Services.Authentication
+﻿namespace SimpLedger.Repository.Configurations
 {
     public class JwtSettings
     {

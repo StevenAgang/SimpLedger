@@ -5,7 +5,7 @@ using SimpLedger.Repository.ViewModel.Sales;
 
 namespace SimpLedger.Repository.Service.Sales
 {
-    public class SalesService(DatabaseContext context) : ISalesInterface
+    public class SalesService(DatabaseContext context) : ISalesService
     {
         private readonly DatabaseContext _context = context;
 

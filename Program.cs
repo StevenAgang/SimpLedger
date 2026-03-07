@@ -4,11 +4,14 @@ using Microsoft.IdentityModel.Tokens;
 using SimpLedger.Middleware;
 using SimpLedger.Repository;
 using SimpLedger.Repository.Configuration.Helper;
+using SimpLedger.Repository.Configurations;
+using SimpLedger.Repository.Configurations.Validation.Account;
 using SimpLedger.Repository.Interface.Inventory;
 using SimpLedger.Repository.Interface.Sales;
+using SimpLedger.Repository.Interfaces.Account;
 using SimpLedger.Repository.Service.Inventory;
 using SimpLedger.Repository.Service.Sales;
-using SimpLedger.Repository.Services.Authentication;
+using SimpLedger.Repository.Services.Account;
 
 namespace SimpLedger
 {
@@ -22,14 +25,16 @@ namespace SimpLedger
 
             #region Scoped Services
 
-            builder.Services.AddScoped<ISalesInterface, SalesService>();
-            builder.Services.AddScoped<IInventoryInterface, InventoryService>();
+            builder.Services.AddScoped<ISalesService, SalesService>();
+            builder.Services.AddScoped<IInventoryService, InventoryService>();
+            builder.Services.AddScoped<IUserAccountService, UserAccountService>();
 
             #endregion
 
             #region Singleton Services
 
             builder.Services.AddSingleton<ResponseHelper>();
+            builder.Services.AddSingleton<LoginValidation>();
 
             #endregion
 

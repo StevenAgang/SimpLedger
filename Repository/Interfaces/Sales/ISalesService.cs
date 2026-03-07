@@ -2,7 +2,7 @@
 
 namespace SimpLedger.Repository.Interface.Sales
 {
-    public interface ISalesInterface
+    public interface ISalesService
     {
         /// <summary>
         ///  A function that will return all sales information in the database
