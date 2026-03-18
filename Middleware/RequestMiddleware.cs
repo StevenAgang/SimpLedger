@@ -1,18 +1,30 @@
 ﻿using SimpLedger.Repository.Configuration.Helper;
+using SimpLedger.Repository.Configurations.Exception_Extender;
+using SimpLedger.Repository.Interfaces.Account;
+using SimpLedger.Repository.Services.Account;
 
 namespace SimpLedger.Middleware
 {
-    public class RequestMiddleware(RequestDelegate next, ResponseHelper response)
+    public class RequestMiddleware(RequestDelegate next, ResponseHelper response, IServiceScopeFactory scope)
     {
         private readonly RequestDelegate _next = next;
         private readonly ResponseHelper _response = response;
+        private readonly IServiceScopeFactory _scope = scope;
 
         public async Task InvokeAsync(HttpContext context)
         {
             try
             {
-                if (Authorize() == false) throw new UnauthorizedAccessException();
+                await Authorize(context);
                 await _next(context);
+            }
+            catch (BadRequest ex)
+            {
+                await Response(context, 400, "application/json", ex.Message);
+            }
+            catch(Conflict ex)
+            {
+                await Response(context, 409, "application/json", ex.Message);
             }
             catch (UnauthorizedAccessException ex)
             {
@@ -33,9 +45,14 @@ namespace SimpLedger.Middleware
             return context;
         }
 
-        public bool Authorize()
+        /// Todo: make a different middleware for logout function. because the current version does is all the route is coming into this
+        /// function resulting in blacklisting of token in every request in every controller
+
+        public async Task Authorize(HttpContext context)
         {
-            return true;
+            using var service = _scope.CreateScope();
+            var tokenService = service.ServiceProvider.GetRequiredService<IUserAccountService>();
+            await tokenService.IsBlackListed(context);
         }
     }
 }

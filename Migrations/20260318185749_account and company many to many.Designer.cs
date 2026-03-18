@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SimpLedger.Repository;
@@ -11,9 +12,11 @@ using SimpLedger.Repository;
 namespace SimpLedger.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20260318185749_account and company many to many")]
+    partial class accountandcompanymanytomany
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -255,7 +258,7 @@ namespace SimpLedger.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("Branch_Id")
+                    b.Property<int>("Branch_Id")
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("Created_At")
@@ -569,7 +572,8 @@ namespace SimpLedger.Migrations
                     b.HasOne("SimpLedger.Repository.Models.Enterprise.Branch", "Branch")
                         .WithMany("Employees")
                         .HasForeignKey("Branch_Id")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.HasOne("SimpLedger.Repository.Models.Account.UserAccount", "UserAccount")
                         .WithOne("Employee")

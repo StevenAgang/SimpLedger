@@ -1,20 +1,19 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace SimpLedger.Migrations
 {
     /// <inheritdoc />
-    public partial class Addexpirationcolumn : Migration
+    public partial class servicetokenschemaaddexpiresInSeconds : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<DateTime>(
-                name: "Expiration",
-                table: "Inventory",
-                type: "datetime2",
+            migrationBuilder.AddColumn<int>(
+                name: "ExpiresInSeconds",
+                table: "ServiceTokens",
+                type: "integer",
                 nullable: true);
         }
 
@@ -22,8 +21,8 @@ namespace SimpLedger.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "Expiration",
-                table: "Inventory");
+                name: "ExpiresInSeconds",
+                table: "ServiceTokens");
         }
     }
 }

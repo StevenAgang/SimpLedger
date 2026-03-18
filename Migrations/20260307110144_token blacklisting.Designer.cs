@@ -2,9 +2,9 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SimpLedger.Repository;
 
 #nullable disable
@@ -12,8 +12,8 @@ using SimpLedger.Repository;
 namespace SimpLedger.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260305210019_isactive")]
-    partial class isactive
+    [Migration("20260307110144_token blacklisting")]
+    partial class tokenblacklisting
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -21,96 +21,137 @@ namespace SimpLedger.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "9.0.13")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("SimpLedger.Repository.Models.Account.AccountType", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("Created_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Created_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Created_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Created_By")
+                        .HasColumnType("integer");
 
-                    b.Property<DateTime>("Deleted_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Deleted_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Deleted_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Deleted_By")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Type")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
-                    b.Property<DateTime>("Updated_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Updated_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Updated_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Updated_By")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
                     b.ToTable("AccountType");
                 });
 
+            modelBuilder.Entity("SimpLedger.Repository.Models.Account.OldToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("Created_At")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("Created_By")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("Deleted_At")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("Deleted_By")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Jti")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("Updated_At")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("Updated_By")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("OldTokens");
+                });
+
             modelBuilder.Entity("SimpLedger.Repository.Models.Account.UserAccount", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int>("AccountType_Id")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    b.Property<DateTime>("Created_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Created_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Created_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Created_By")
+                        .HasColumnType("integer");
 
-                    b.Property<DateTime>("Deleted_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Deleted_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Deleted_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Deleted_By")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Email")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("FirstName")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("LastName")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("MiddleName")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Password")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Salt")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
-                    b.Property<DateTime>("Updated_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Updated_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Updated_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Updated_By")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -123,36 +164,36 @@ namespace SimpLedger.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Address")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<int>("Company_Id")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    b.Property<DateTime>("Created_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Created_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Created_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Created_By")
+                        .HasColumnType("integer");
 
-                    b.Property<DateTime>("Deleted_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Deleted_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Deleted_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Deleted_By")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
-                    b.Property<DateTime>("Updated_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Updated_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Updated_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Updated_By")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -165,39 +206,39 @@ namespace SimpLedger.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Address")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
-                    b.Property<DateTime>("Created_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Created_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Created_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Created_By")
+                        .HasColumnType("integer");
 
-                    b.Property<DateTime>("Deleted_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Deleted_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Deleted_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Deleted_By")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
-                    b.Property<DateTime>("Updated_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Updated_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Updated_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Updated_By")
+                        .HasColumnType("integer");
 
                     b.Property<int>("UserAccount_Id")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -211,36 +252,36 @@ namespace SimpLedger.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int>("Branch_Id")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    b.Property<DateTime>("Created_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Created_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Created_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Created_By")
+                        .HasColumnType("integer");
 
-                    b.Property<DateTime>("Deleted_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Deleted_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Deleted_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Deleted_By")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
-                    b.Property<DateTime>("Updated_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Updated_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Updated_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Updated_By")
+                        .HasColumnType("integer");
 
                     b.Property<int>("UserAccount_Id")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -256,48 +297,48 @@ namespace SimpLedger.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime?>("ArrivalDate")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Branch_Id")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<double>("CostPrice")
-                        .HasColumnType("float");
+                        .HasColumnType("double precision");
 
-                    b.Property<DateTime>("Created_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Created_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Created_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Created_By")
+                        .HasColumnType("integer");
 
-                    b.Property<DateTime>("Deleted_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Deleted_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Deleted_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Deleted_By")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("ExpirationDate")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<int>("Product_Id")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("Stock")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    b.Property<DateTime>("Updated_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Updated_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Updated_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Updated_By")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -312,36 +353,36 @@ namespace SimpLedger.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("Created_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Created_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Created_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Created_By")
+                        .HasColumnType("integer");
 
-                    b.Property<DateTime>("Deleted_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Deleted_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Deleted_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Deleted_By")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<double>("Price")
-                        .HasColumnType("float");
+                        .HasColumnType("double precision");
 
-                    b.Property<DateTime>("Updated_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Updated_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Updated_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Updated_By")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -352,36 +393,36 @@ namespace SimpLedger.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int>("Branch_Id")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    b.Property<DateTime>("Created_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Created_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Created_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Created_By")
+                        .HasColumnType("integer");
 
-                    b.Property<DateTime>("Deleted_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Deleted_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Deleted_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Deleted_By")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<double>("TotalAmount")
-                        .HasColumnType("float");
+                        .HasColumnType("double precision");
 
-                    b.Property<DateTime>("Updated_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Updated_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Updated_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Updated_By")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -394,45 +435,45 @@ namespace SimpLedger.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("Created_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Created_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Created_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Created_By")
+                        .HasColumnType("integer");
 
-                    b.Property<DateTime>("Deleted_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Deleted_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Deleted_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Deleted_By")
+                        .HasColumnType("integer");
 
                     b.Property<int>("Inventory_Id")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.Property<double>("Price")
-                        .HasColumnType("float");
+                        .HasColumnType("double precision");
 
                     b.Property<int>("Quantity")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("Sales_Id")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<double>("Subtotal")
-                        .HasColumnType("float");
+                        .HasColumnType("double precision");
 
-                    b.Property<DateTime>("Updated_At")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("Updated_At")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Updated_By")
-                        .HasColumnType("int");
+                    b.Property<int?>("Updated_By")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 

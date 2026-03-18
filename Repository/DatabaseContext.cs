@@ -1,8 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SimpLedger.Repository.Models.Account;
+using SimpLedger.Repository.Models.Auth;
 using SimpLedger.Repository.Models.Enterprise;
 using SimpLedger.Repository.Models.Inventory;
 using SimpLedger.Repository.Models.Sales;
+using SimpLedger.Repository.Models.Verification;
 
 namespace SimpLedger.Repository
 {
@@ -21,6 +23,9 @@ namespace SimpLedger.Repository
 
         public DbSet<UserAccount> UserAccount { get; set; }
         public DbSet<AccountType> AccountType { get; set; }
+        public DbSet<ExpiredToken> ExpiredTokens { get; set; }
+
+        public DbSet<VerificationCode> VerificationCodes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -50,6 +55,12 @@ namespace SimpLedger.Repository
                 .HasKey(k => k.Id);
 
             modelBuilder.Entity<AccountType>()
+                .HasKey(k => k.Id);
+
+            modelBuilder.Entity<ExpiredToken>()
+                .HasKey(k => k.Id);
+
+            modelBuilder.Entity<VerificationCode>()
                 .HasKey(k => k.Id);
 
             #endregion
@@ -94,8 +105,8 @@ namespace SimpLedger.Repository
 
             modelBuilder.Entity<Company>()
                 .HasOne(u => u.UserAccount)
-                .WithOne(c => c.Company)
-                .HasForeignKey<Company>(u => u.UserAccount_Id)
+                .WithMany(c => c.Company)
+                .HasForeignKey(u => u.UserAccount_Id)
                 .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<Employee>()
@@ -114,6 +125,12 @@ namespace SimpLedger.Repository
                 .HasOne(u => u.AccountType)
                 .WithMany(a => a.UserAccounts)
                 .HasForeignKey(u => u.AccountType_Id)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<VerificationCode>()
+                .HasOne(u => u.UserAccount)
+                .WithMany(v => v.VerificationCodes)
+                .HasForeignKey(u => u.UserAccount_Id)
                 .OnDelete(DeleteBehavior.NoAction);
 
             #endregion

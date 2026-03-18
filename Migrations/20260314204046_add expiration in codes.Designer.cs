@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SimpLedger.Repository;
@@ -11,9 +12,11 @@ using SimpLedger.Repository;
 namespace SimpLedger.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20260314204046_add expiration in codes")]
+    partial class addexpirationincodes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -57,6 +60,47 @@ namespace SimpLedger.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("AccountType");
+                });
+
+            modelBuilder.Entity("SimpLedger.Repository.Models.Account.OldToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("Created_At")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("Created_By")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("Deleted_At")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("Deleted_By")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Jti")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("Updated_At")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("Updated_By")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("OldTokens");
                 });
 
             modelBuilder.Entity("SimpLedger.Repository.Models.Account.UserAccount", b =>
@@ -114,47 +158,6 @@ namespace SimpLedger.Migrations
                     b.HasIndex("AccountType_Id");
 
                     b.ToTable("UserAccount");
-                });
-
-            modelBuilder.Entity("SimpLedger.Repository.Models.Auth.ExpiredToken", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime?>("Created_At")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("Created_By")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("Deleted_At")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("Deleted_By")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Jti")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("Updated_At")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("Updated_By")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ExpiredTokens");
                 });
 
             modelBuilder.Entity("SimpLedger.Repository.Models.Enterprise.Branch", b =>
@@ -242,7 +245,8 @@ namespace SimpLedger.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserAccount_Id");
+                    b.HasIndex("UserAccount_Id")
+                        .IsUnique();
 
                     b.ToTable("Company");
                 });
@@ -255,7 +259,7 @@ namespace SimpLedger.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("Branch_Id")
+                    b.Property<int>("Branch_Id")
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("Created_At")
@@ -556,8 +560,8 @@ namespace SimpLedger.Migrations
             modelBuilder.Entity("SimpLedger.Repository.Models.Enterprise.Company", b =>
                 {
                     b.HasOne("SimpLedger.Repository.Models.Account.UserAccount", "UserAccount")
-                        .WithMany("Company")
-                        .HasForeignKey("UserAccount_Id")
+                        .WithOne("Company")
+                        .HasForeignKey("SimpLedger.Repository.Models.Enterprise.Company", "UserAccount_Id")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
@@ -569,7 +573,8 @@ namespace SimpLedger.Migrations
                     b.HasOne("SimpLedger.Repository.Models.Enterprise.Branch", "Branch")
                         .WithMany("Employees")
                         .HasForeignKey("Branch_Id")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.HasOne("SimpLedger.Repository.Models.Account.UserAccount", "UserAccount")
                         .WithOne("Employee")

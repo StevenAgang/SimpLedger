@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SimpLedger.Repository;
@@ -11,9 +12,11 @@ using SimpLedger.Repository;
 namespace SimpLedger.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20260318145034_delete servicetoken schema")]
+    partial class deleteservicetokenschema
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -242,7 +245,8 @@ namespace SimpLedger.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserAccount_Id");
+                    b.HasIndex("UserAccount_Id")
+                        .IsUnique();
 
                     b.ToTable("Company");
                 });
@@ -255,7 +259,7 @@ namespace SimpLedger.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("Branch_Id")
+                    b.Property<int>("Branch_Id")
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("Created_At")
@@ -556,8 +560,8 @@ namespace SimpLedger.Migrations
             modelBuilder.Entity("SimpLedger.Repository.Models.Enterprise.Company", b =>
                 {
                     b.HasOne("SimpLedger.Repository.Models.Account.UserAccount", "UserAccount")
-                        .WithMany("Company")
-                        .HasForeignKey("UserAccount_Id")
+                        .WithOne("Company")
+                        .HasForeignKey("SimpLedger.Repository.Models.Enterprise.Company", "UserAccount_Id")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
@@ -569,7 +573,8 @@ namespace SimpLedger.Migrations
                     b.HasOne("SimpLedger.Repository.Models.Enterprise.Branch", "Branch")
                         .WithMany("Employees")
                         .HasForeignKey("Branch_Id")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.HasOne("SimpLedger.Repository.Models.Account.UserAccount", "UserAccount")
                         .WithOne("Employee")

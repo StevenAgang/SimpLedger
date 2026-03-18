@@ -9,7 +9,7 @@ namespace SimpLedger.Repository.Models.Enterprise
         public int UserAccount_Id { get; set; }
         public UserAccount? UserAccount { get; set; }
         [ForeignKey("Branch")]
-        public int Branch_Id { get; set; }
+        public int? Branch_Id { get; set; }
         public Branch? Branch { get; set; }
 
     }

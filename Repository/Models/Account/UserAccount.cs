@@ -1,4 +1,5 @@
 ﻿using SimpLedger.Repository.Models.Enterprise;
+using SimpLedger.Repository.Models.Verification;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SimpLedger.Repository.Models.Account
@@ -15,8 +16,9 @@ namespace SimpLedger.Repository.Models.Account
         public string? Password { get; set; }
         public string? Salt { get; set; }
 
-        public Company? Company { get; set; }
+        public ICollection<Company>? Company { get; set; }
         public Employee? Employee { get; set; }
+        public ICollection<VerificationCode>? VerificationCodes { get; set; }
 
     }
 }
