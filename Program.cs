@@ -8,10 +8,15 @@ using SimpLedger.Repository;
 using SimpLedger.Repository.Configuration.Helper;
 using SimpLedger.Repository.Configurations;
 using SimpLedger.Repository.Configurations.Validation.Account;
+using SimpLedger.Repository.Data.Account;
+using SimpLedger.Repository.Data.Common;
+using SimpLedger.Repository.Data.Enterprise;
 using SimpLedger.Repository.Interface.Inventory;
 using SimpLedger.Repository.Interface.Sales;
 using SimpLedger.Repository.Interfaces.Account;
 using SimpLedger.Repository.Interfaces.Common;
+using SimpLedger.Repository.Interfaces.Data.Account;
+using SimpLedger.Repository.Interfaces.Data.Enterprise;
 using SimpLedger.Repository.Interfaces.Emailing;
 using SimpLedger.Repository.Service.Inventory;
 using SimpLedger.Repository.Service.Sales;
@@ -42,11 +47,19 @@ namespace SimpLedger
 
             #region Scoped Services
 
+
+            // Services
             builder.Services.AddScoped<ISalesService, SalesService>();
             builder.Services.AddScoped<IInventoryService, InventoryService>();
             builder.Services.AddScoped<IUserAccountService, UserAccountService>();
             builder.Services.AddScoped<IEmailProviderService, EmailProviderService>();
             builder.Services.AddScoped<IManualAuthenticationService, ManualAuthenticationService>();
+
+            //Data
+            builder.Services.AddScoped<IUserAccountData, UserAccountData>();
+            builder.Services.AddScoped<ITokenManagerData, TokenManagerData>();
+            builder.Services.AddScoped<ICompanyData, CompanyData>();
+            builder.Services.AddScoped<IEmployeeData, EmployeeData>();
 
             #endregion
 
@@ -75,8 +88,8 @@ namespace SimpLedger
                 {
                     ValidateIssuer = true,
                     ValidateAudience = true,
-                    ValidateLifetime = false,
-                    ValidateIssuerSigningKey = false,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
                     ValidIssuer = builder.Configuration["Jwt:Issuer"],
                     ValidAudience = builder.Configuration["Jwt:Audience"],
                     IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),

@@ -1,7 +1,6 @@
 ﻿using SimpLedger.Repository.Configuration.Helper;
 using SimpLedger.Repository.Configurations.Exception_Extender;
 using SimpLedger.Repository.Interfaces.Account;
-using SimpLedger.Repository.Services.Account;
 
 namespace SimpLedger.Middleware
 {
@@ -18,17 +17,29 @@ namespace SimpLedger.Middleware
                 await Authorize(context);
                 await _next(context);
             }
+            catch (AcceptedDbCommit ex) 
+            {
+                await Response(context, 400, "application/json", ex.Message);
+            }
             catch (BadRequest ex)
             {
                 await Response(context, 400, "application/json", ex.Message);
             }
-            catch(Conflict ex)
+            catch (Conflict ex)
             {
                 await Response(context, 409, "application/json", ex.Message);
             }
             catch (UnauthorizedAccessException ex)
             {
                 await Response(context, 401, "application/json", ex.Message);
+            }
+            catch(OperationCanceledException ex)
+            {
+                await Response(context, 400, "application/json", ex.Message);
+            }
+            catch (NullReferenceException ex)
+            {
+                await Response(context, 500, "application/json", "Something went wrong please try again later");
             }
             catch(Exception ex)
             {

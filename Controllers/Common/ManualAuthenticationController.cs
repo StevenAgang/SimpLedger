@@ -15,12 +15,29 @@ namespace SimpLedger.Controllers.Common
         private readonly ResponseHelper _response = response;
 
         [AllowAnonymous]
-        [HttpGet("verification")]
-        public async Task<IActionResult> VerificationCodesToken([FromQuery] string token)
+        [HttpGet("verify-token")]
+        public async Task<IActionResult> ChangePasswordToken([FromQuery] string token)
         {
             if (string.IsNullOrWhiteSpace(token)) throw new UnauthorizedAccessException("Unauthorized Action");
             var user = await _manualAuthenticationService.VerificationToken(token);
             return StatusCode(200, _response.Success(200, true, "Proceed to account activation", user));
+        }
+
+        [AllowAnonymous]
+        [HttpGet("authorize")]
+        public IActionResult AuthorizeView()
+        {
+            Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+            Response.Headers["Pragma"] = "no-cache";
+            Response.Headers["Expires"] = "0";
+
+            var token = Request.Cookies["AccessToken"];
+
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                return StatusCode(200, _response.Success(200,true,null,null));
+            }
+            return StatusCode(200, _response.Success(401,false,null,null));
         }
     }
 }

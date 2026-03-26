@@ -10,6 +10,7 @@ namespace SimpLedger.Repository.Models.Enterprise
         public int Company_Id { get; set; }
         public Company? Company { get; set; }
         public string? Address { get; set; }
+        public bool Main { get; set; }
         public ICollection<Sale>? Sales { get; set; } = [];
         public ICollection<Inv.Inventory>? Inventories { get; set; } = [];
         public ICollection<Employee>? Employees { get; set; } = [];

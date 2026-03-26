@@ -62,24 +62,6 @@ namespace SimpLedger.Repository.Services.Account
             return rand.Next(100000, 999999);
         }
 
-        //public string GenerateRandomString(int numberOfCharacter)
-        //{
-        //    const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        //    var result = new char[numberOfCharacter];
-        //    var buffer = new byte[sizeof(uint)];
-
-        //    for (int i = 0; i < numberOfCharacter; i++)
-        //    {
-        //        RandomNumberGenerator.Fill(buffer);
-        //        uint num = BitConverter.ToUInt32(buffer, 0);
-        //        result[i] = chars[(int)(num % (uint)chars.Length)];
-        //    }
-
-        //    return new string(result);
-        //}
-
-
-
         public string Hashed<T>(T value, string salt)
         {
             var combined = Encoding.UTF8.GetBytes(value + salt);

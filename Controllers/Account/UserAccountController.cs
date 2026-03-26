@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
 using SimpLedger.Repository.Configuration.Helper;
 using SimpLedger.Repository.Configurations;
+using SimpLedger.Repository.Configurations.AttributeExtender;
 using SimpLedger.Repository.Configurations.Validation.Account;
 using SimpLedger.Repository.Interfaces.Account;
 using SimpLedger.Repository.ViewModels.Account;
@@ -16,7 +17,6 @@ namespace SimpLedger.Controllers.UserAccount
     [Route("user")]
     public class UserAccountController
         (
-        UserAccountValidation userAccountValidation, 
         IUserAccountService userAccountService, 
         ResponseHelper response,
         IConfiguration configuration,
@@ -25,7 +25,6 @@ namespace SimpLedger.Controllers.UserAccount
     {
         private readonly ResponseHelper _response = response;
         private readonly IUserAccountService _userAccountService = userAccountService;
-        private readonly UserAccountValidation _userAccountValidation = userAccountValidation;
         private readonly IConfiguration _configuration = configuration;
         private readonly ISetTokenSevice _setTokenSevice = setTokenService;
 
@@ -34,10 +33,9 @@ namespace SimpLedger.Controllers.UserAccount
         public async Task<IActionResult> Login([FromBody]UserAccountLogin user, CancellationToken cancellationToken)
         {
 
-            var users = HttpContext.User;
-            var _= users.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
-            _userAccountValidation.NotNullEmailAndPassword(user);
-
+            //var users = HttpContext.User;
+            //var _= users.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+            
             var token = await _userAccountService.Authenticate(user,cancellationToken);
 
             var httpContextSettings = new HttpContextSettings();
@@ -69,55 +67,98 @@ namespace SimpLedger.Controllers.UserAccount
             return Ok(new { accessToken, idToken });
         }
 
-
+        [Transaction]
         [HttpPost("register")]
         [AllowAnonymous]
-        public async Task<IActionResult> Create([FromBody]UserAccountCreation user)
+        public async Task<IActionResult> Create([FromBody]UserAccountCreation user, CancellationToken cancellation)
         {
-            _userAccountValidation.ValidInformation(user);
-            _userAccountValidation.ValidEmailAndPassword(user.Email, user.Password);
+            var token =  await _userAccountService.CreateAccount(user, cancellation);
 
-            var token =  await _userAccountService.CreateAccount(user);
-
-            return StatusCode(200, _response.Success(200, true, "Proceed to account activation", token.Token));
+            return StatusCode(200, _response.Success(200, true, "Proceed to account activation", token));
         }
 
+        [Transaction]
         [AllowAnonymous]
         [HttpPost("activate")]
-        public async Task<IActionResult> ActivateAccount([FromBody] ActivateRequest email)
+        public async Task<IActionResult> ActivateAccount([FromBody] ActivateRequest email, CancellationToken cancellation)
         {
-            var token = await _userAccountService.ActivateAccount(email.Email);
+            var token = await _userAccountService.ActivateAccount(email.Email, "activation", cancellation);
 
-            return StatusCode(200, _response.Success(200, true, "Activation code sent", token.Token));
+            return StatusCode(200, _response.Success(200, true, "Activation code sent", token));
         }
 
         [AllowAnonymous]
         [HttpGet("resend")]
-        public async Task<IActionResult> VerificationResend([FromQuery] int id)
+        public async Task<IActionResult> VerificationResend([FromQuery] string token)
         {
-            await _userAccountService.ResendCode(id);
+            await _userAccountService.ResendCode(token);
             return StatusCode(200, _response.Success(200, true, "Activation code sent", null));
         }
 
+        [Transaction]
         [AllowAnonymous]
         [HttpPost("verify")]
         public async Task<IActionResult> VerifyCode([FromBody] VerifyCode code)
         {
-           var user = await _userAccountService.CodeVerification(code);
+            var user = await _userAccountService.CodeVerification(code);
 
-            var httpContextSettings = new HttpContextSettings();
+            object newUser;
 
-            _configuration.GetSection("HttpContextSettings").Bind(httpContextSettings);
-
-            _setTokenSevice.SetCookie("AccessToken", user.Token, httpContextSettings, HttpContext);
-
-            object newUser = new
+            if(code.ReturnJwtToken == true)
             {
-                Id = user.Id,
-                Name = user.Name
-            };
+                var httpContextSettings = new HttpContextSettings();
 
-            return StatusCode(200, _response.Success(200, true, "Activated SucessFully", newUser));
+                _configuration.GetSection("HttpContextSettings").Bind(httpContextSettings);
+
+                _setTokenSevice.SetCookie("AccessToken", user.Token, httpContextSettings, HttpContext);
+
+                newUser = new
+                {
+                    Id = user.Id,
+                    Name = user.Name
+                };
+            }
+            else
+            {
+                newUser = new
+                {
+                    Id = user.Id,
+                    Name = user.Name,
+                    Token = user.Token
+                };
+            }
+
+                return StatusCode(200, _response.Success(200, true, "Activated SucessFully", newUser));
+        }
+
+        [Transaction]
+        [AllowAnonymous]
+        [HttpPost("recover")]
+        public async Task<IActionResult> RecoverAccount([FromBody] ActivateRequest email, CancellationToken cancellation)
+        {
+            var token = await _userAccountService.ActivateAccount(email.Email, "recovery", cancellation);
+
+            return StatusCode(200, _response.Success(200, true, "Activation code sent", token));
+        }
+
+        [Transaction]
+        [AllowAnonymous]
+        [HttpPost("changepass")]
+        public async Task<IActionResult> ChangePassword([FromBody] UserRecoveryViewModel user)
+        {
+            var token = await _userAccountService.ChangePassword(user);
+
+            var httpoContextSettings = new HttpContextSettings();
+
+            _configuration.GetSection("HttpContextSettings").Bind(httpoContextSettings);
+            _setTokenSevice.SetCookie("AccessToken", token.Token, httpoContextSettings, HttpContext);
+
+            var newUser = new
+            {
+                Id = token.Id,
+                Name = token.Name,
+            };
+            return StatusCode(200, _response.Success(200, true, "Activation code sent", newUser));
         }
 
         [HttpGet("logout")]

@@ -28,14 +28,20 @@
         public string? BusinessEmail { get; set; }
     }
 
+    public class UserRecoveryViewModel
+    {
+        public required string Token { get; set; }
+        public required string Password { get; set; }
+    }
+
     public class ActivateAccountViewModel
     {
         public required string Token { get; set; }
-
     }
 
-    public class  ActivateAccountResponse : ActivateAccountViewModel
+    public class ActivateAccountResponse : ActivateAccountViewModel
     {
+        public required int Id { get; set; }
     }
 
     public class ActivateRequest
@@ -45,8 +51,9 @@
 
     public class VerifyCode
     {
-        public int Id { get; set; }
-        public int Code { get; set; }
+        public required int Code { get; set; }
+        public required string Token { get; set; }
+        public bool ReturnJwtToken { get; set; } = false;
     }
 
     public class AuthenticationResponse

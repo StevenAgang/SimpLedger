@@ -11,9 +11,8 @@ using System.Text.Json;
 
 namespace SimpLedger.Repository.Services.Emailing
 {
-    public class EmailProviderService(IConfiguration configuration, DatabaseContext context) : IEmailProviderService
+    public class EmailProviderService(IConfiguration configuration) : IEmailProviderService
     {
-        private readonly DatabaseContext _context = context;
         private readonly IConfiguration _configuration = configuration;
         public async Task SendMail(EmailSenderViewModel mail)
         {

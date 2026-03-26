@@ -1,6 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SimpLedger.Repository.Configurations.Exception_Extender;
+using SimpLedger.Repository.Configurations.Validation.Account;
 using SimpLedger.Repository.Interfaces.Account;
+using SimpLedger.Repository.Interfaces.Common;
+using SimpLedger.Repository.Interfaces.Data;
+using SimpLedger.Repository.Interfaces.Data.Account;
+using SimpLedger.Repository.Interfaces.Data.Enterprise;
 using SimpLedger.Repository.Interfaces.Emailing;
 using SimpLedger.Repository.Models.Account;
 using SimpLedger.Repository.Models.Auth;
@@ -8,24 +13,45 @@ using SimpLedger.Repository.Models.Enterprise;
 using SimpLedger.Repository.Models.Verification;
 using SimpLedger.Repository.ViewModels.Account;
 using SimpLedger.Repository.ViewModels.Emailing;
+using SimpLedger.Repository.ViewModels.Verification;
 using System.IdentityModel.Tokens.Jwt;
 
 namespace SimpLedger.Repository.Services.Account
 {
-    public class UserAccountService(DatabaseContext context, ISetTokenSevice tokenWriterSevice, IEmailProviderService emailProviderService) : IUserAccountService
+    public class UserAccountService
+        (
+        IUserAccountData userAccountData, 
+        ISetTokenSevice tokenWriterSevice, 
+        IEmailProviderService emailProviderService,
+        ICompanyData companyData,
+        IEmployeeData employeeData,
+        ITokenManagerData tokenManaganerData
+        ) : IUserAccountService
     {
         private readonly ISetTokenSevice _tokenWriterSevice = tokenWriterSevice;
         private readonly IEmailProviderService _emailProviderService = emailProviderService;
-        private readonly DatabaseContext _context = context;
-        public async Task<AuthenticationResponse> Authenticate(UserAccountLogin user, CancellationToken cancellationToken)
-        {
-            var auth = await _context.UserAccount.FirstOrDefaultAsync(u => u.Email == user.Email && u.IsActive == true, cancellationToken);
+        private readonly IUserAccountData _userAccountData = userAccountData;
+        private readonly ICompanyData _companyData = companyData;
+        private readonly IEmployeeData _employeeData = employeeData;
+        private readonly ITokenManagerData _tokenManagerData = tokenManaganerData;
 
-            if (auth == null) throw new UnauthorizedAccessException("Invalid credentials");
+        public async Task<AuthenticationResponse> Authenticate(UserAccountLogin user, CancellationToken cancellation)
+        {
+            UserAccountValidation.NotNullEmailAndPassword(user);
+
+            var auth = await _userAccountData.GetUserActiveByEmail(user.Email,true,cancellation);
+
+            if (auth == null)
+            {
+                throw new UnauthorizedAccessException("Invalid credentials");
+            }
 
             var hashedPassword = _tokenWriterSevice.Hashed(user.Password, auth.Salt);
 
-            if (auth.Password != hashedPassword) throw new UnauthorizedAccessException("Invalid Credentials");
+            if (auth.Password != hashedPassword)
+            {
+                throw new UnauthorizedAccessException("Invalid Credentials");
+            }
 
             string tkn = _tokenWriterSevice.GenerateJwtToken(auth.Id, $"{auth.FirstName} {(auth.MiddleName != "" ? $"{auth.MiddleName[0]}." : "")} {auth.LastName}");
 
@@ -39,28 +65,24 @@ namespace SimpLedger.Repository.Services.Account
             return token;
         }
 
-        public async Task<ActivateAccountResponse> CreateAccount(UserAccountCreation user)
+        public async Task<ActivateAccountResponse> CreateAccount(UserAccountCreation user, CancellationToken cancellation)
         {
-            var exist = await _context.UserAccount.AsNoTracking().FirstOrDefaultAsync(u => u.Email == user.Email);
+            UserAccountValidation.ValidInformation(user);
+            UserAccountValidation.ValidEmailAndPassword(user.Email, user.Password);
 
-            if (exist != null && exist.IsActive == true) throw new Conflict($"{user.Email} is already associated with another account");
-            if (exist != null && exist.IsActive == false) throw new Conflict($"{user.Email} is already associated with another account but not yet active, go to activation account page to activate your account");
+            var exist = await _userAccountData.GetUserNotActiveByEmail(user.Email, false, cancellation);
+
+            if (exist != null && exist.IsActive == true)
+            {
+                throw new Conflict($"{user.Email} is already associated with another account");
+            }
+            if (exist != null && exist.IsActive == false)
+            {
+                throw new Conflict($"{user.Email} is already associated with another account but not yet active, go to activation account page to activate your account");
+            }
 
             var salt = _tokenWriterSevice.GenerateSalt();
             var password = _tokenWriterSevice.Hashed(user.Password, salt);
-            int sixDigitCode = _tokenWriterSevice.GenerateCode();
-            var localToken = _tokenWriterSevice.GenerateGenericToken(sixDigitCode);
-
-            var mail = new EmailSenderViewModel
-            {
-                ToName = $"{user.FirstName} {(user.MiddleName != "" ? $"{user.MiddleName[0]}." : "")} {user.LastName}",
-                ToMail = user.Email,
-                Subject = "Verification Code",
-                Message = $"{sixDigitCode}",
-                HeaderMessage = "Your six digit verification code"
-            };
-
-            await _emailProviderService.SendMail(mail);
 
             var account = new UserAccount
             {
@@ -75,8 +97,7 @@ namespace SimpLedger.Repository.Services.Account
                 IsActive = false
             };
 
-            _context.Add(account);
-            await _context.SaveChangesAsync();
+            await _userAccountData.Save(account, cancellation);
 
             if (user.UserType == "1")
             {
@@ -90,7 +111,8 @@ namespace SimpLedger.Repository.Services.Account
                     Created_At = DateTime.UtcNow,
                     IsActive = false
                 };
-                _context.Add(company);
+
+                await _companyData.Save(company, cancellation);
             }
             else
             {
@@ -101,46 +123,78 @@ namespace SimpLedger.Repository.Services.Account
                     Created_At = DateTime.UtcNow,
                 };
 
-                _context.Add(employee);
+                await _employeeData.Save(employee, cancellation);
             }
 
-                var verification = new VerificationCode
-                {
-                    UserAccount_Id = account.Id,
-                    Code = sixDigitCode,
-                    Token = localToken,
-                    ExpiresIn = DateTime.UtcNow.AddMinutes(5),
-                    Created_At = DateTime.UtcNow,
-                    IsActive = true
-                };
 
-            _context.Add(verification);
-            await _context.SaveChangesAsync();
-
-            var token = new ActivateAccountResponse
+            var inf = new EmailVerificationRequestField
             {
-                Token = localToken,
+                Id = account.Id,
+                FirstName = user.FirstName,
+                MiddleName = user.MiddleName,
+                LastName = user.LastName,
+                Email = user.Email
             };
 
-            return token;
+            return await GenerateEmailVerification(inf);
         }
 
-
-        public async Task<ActivateAccountResponse> ActivateAccount(string email)
+        public async Task<ActivateAccountResponse> ActivateAccount(string email, string purpose, CancellationToken cancellation)
         {
-            var account = await _context.UserAccount.AsNoTracking().FirstOrDefaultAsync(a => a.Email == email && a.IsActive == false);
+            var account = new UserAccount();
 
-            if (account == null) throw new BadRequest($"Email not found or is already activated");
+            if(purpose == "activation")
+            {
+                account = await _userAccountData.GetUserNotActiveByEmail(email,false, cancellation);
+            }
 
-            var existingCode = await _context.VerificationCodes.FirstOrDefaultAsync(c => c.UserAccount_Id == account.Id && c.IsActive == true);
+            if(purpose == "recovery")
+            {
+                account = await _userAccountData.GetUserActiveByEmail(email,true,cancellation);
+            }
 
+            if (account == null)
+            {
+                int sixDigitCode = _tokenWriterSevice.GenerateCode();
+                return new ActivateAccountResponse
+                {
+                    Id = 0,
+                    Token = _tokenWriterSevice.GenerateGenericToken(sixDigitCode),
+                };
+            }
+
+            var existingCode = await _tokenManagerData.GetActiveVerificationCodeByUserId(account.Id, true);
+
+            if (existingCode != null)
+            {
+                existingCode.IsActive = false;
+                existingCode.Updated_At = DateTime.UtcNow;
+                await _tokenManagerData.SaveChanges();
+            }
+
+            var inf = new EmailVerificationRequestField
+            {
+                Id = account.Id,
+                FirstName = account.FirstName,
+                MiddleName = account.MiddleName,
+                LastName = account.LastName,
+                Email =  account.Email
+            };
+
+            return await GenerateEmailVerification(inf);
+        }
+
+        private async Task<ActivateAccountResponse> GenerateEmailVerification(EmailVerificationRequestField inf)
+        {
             int sixDigitCode = _tokenWriterSevice.GenerateCode();
             var localToken = _tokenWriterSevice.GenerateGenericToken(sixDigitCode);
 
+            SaveVerificationCode(inf.Id, sixDigitCode, localToken);
+
             var mail = new EmailSenderViewModel
             {
-                ToName = $"{account.FirstName} {(account.MiddleName != "" ? $"{account.MiddleName[0]}." : "")} {account.LastName}",
-                ToMail = account.Email,
+                ToName = $"{inf.FirstName} {(inf.MiddleName != "" ? $"{inf.MiddleName[0]}." : "")} {inf.LastName}",
+                ToMail = inf.Email,
                 Subject = "Verification Code",
                 Message = $"{sixDigitCode}",
                 HeaderMessage = "Your six digit verification code"
@@ -148,16 +202,18 @@ namespace SimpLedger.Repository.Services.Account
 
             await _emailProviderService.SendMail(mail);
 
-            if (existingCode != null)
+            return new ActivateAccountResponse
             {
-                existingCode.IsActive = false;
-                existingCode.Updated_At = DateTime.UtcNow;
-                await _context.SaveChangesAsync();
-            }
+                Id = inf.Id,
+                Token = localToken,
+            };
+        }
 
+        private async Task SaveVerificationCode(int id, int sixDigitCode, string localToken)
+        {
             var verification = new VerificationCode
             {
-                UserAccount_Id = account.Id,
+                UserAccount_Id = id,
                 Code = sixDigitCode,
                 Token = localToken,
                 ExpiresIn = DateTime.UtcNow.AddMinutes(5),
@@ -165,18 +221,22 @@ namespace SimpLedger.Repository.Services.Account
                 IsActive = true
             };
 
-            _context.Add(verification);
-            await _context.SaveChangesAsync();
-
-            return new ActivateAccountResponse
-            {
-                Token = localToken,
-            };
+            await _tokenManagerData.Save(verification);
         }
 
-        public async Task ResendCode(int id)
+        public async Task ResendCode(string token)
         {
-            var existingCode = _context.VerificationCodes.Include(u => u.UserAccount).FirstOrDefault(u => u.UserAccount_Id == id && u.IsActive == true);
+            if (token == "")
+            {
+                return;
+            }
+
+            var existingCode = await _tokenManagerData.GetActiveVerificationCodeByToken(token, true);
+
+            if(existingCode == null)
+            {
+                throw new ResourceNotFound("This request is already expired, please request a new one");
+            }
 
             int sixDigitCode = _tokenWriterSevice.GenerateCode();
 
@@ -185,7 +245,7 @@ namespace SimpLedger.Repository.Services.Account
             existingCode.Updated_By = existingCode.UserAccount_Id;
             existingCode.ExpiresIn = DateTime.UtcNow.AddMinutes(5);
 
-            await _context.SaveChangesAsync();
+            await _tokenManagerData.SaveChanges();
 
             var mail = new EmailSenderViewModel
             {
@@ -201,24 +261,37 @@ namespace SimpLedger.Repository.Services.Account
 
         public async Task<UserAccountViewModel> CodeVerification(VerifyCode code)
         {
-            var auth = await _context.VerificationCodes.Include(u => u.UserAccount).FirstOrDefaultAsync(c => c.UserAccount_Id == code.Id && c.IsActive == true);
+            if(code == null || code.Token == "" || code.Code == 0)
+            {
+                throw new BadRequest("Invalid code");
+            }
+
+            var auth = await _tokenManagerData.GetActiveVerificationCodeByToken(code.Token, true);
             dynamic? type;
+
+            
+            if (auth == null)
+            {
+                throw new BadRequest("Code is invalid");
+            }
 
             if(auth.UserAccount.AccountType_Id == 1)
             {
-                type = await _context.Company.FirstOrDefaultAsync(u => u.UserAccount_Id == code.Id);
+                type = await _companyData.GetCompanyByUserId(auth.UserAccount_Id, true);
             }
             else
             {
-                type = await _context.Employee.FirstOrDefaultAsync(u => u.UserAccount_Id == code.Id);
+                type = await _employeeData.GetEmployeeByUserId(auth.UserAccount_Id, true);
             }
 
-            if (auth == null) throw new Exception("Token is expired");
             if (DateTime.UtcNow > auth.ExpiresIn)
             {
                 auth.IsActive = false;
                 auth.Updated_At = DateTime.UtcNow;
-                throw new Exception("Token is expired");
+
+                await _tokenManagerData.SaveChanges();
+
+                throw new AcceptedDbCommit("Code is expired");
             }
 
             if(auth.Code == code.Code)
@@ -229,20 +302,67 @@ namespace SimpLedger.Repository.Services.Account
                 type.Updated_At = DateTime.UtcNow;
                 auth.IsActive = false;
 
-                await _context.SaveChangesAsync();
+                await _userAccountData.SaveChanges();
 
-                string tkn = _tokenWriterSevice.GenerateJwtToken(auth.UserAccount.Id, $"{auth.UserAccount.FirstName} {(auth.UserAccount.MiddleName != "" ? $"{auth.UserAccount.MiddleName[0]}." : "")} {auth.UserAccount.LastName}");
+                string tkn = "";
+                if(code.ReturnJwtToken == true)
+                {
+                    tkn = _tokenWriterSevice.GenerateJwtToken(auth.UserAccount.Id, $"{auth.UserAccount.FirstName} {(auth.UserAccount.MiddleName != "" ? $"{auth.UserAccount.MiddleName[0]}." : "")} {auth.UserAccount.LastName}");
+                }
+                else
+                {
+                    int sixDigitCode = _tokenWriterSevice.GenerateCode();
+                    tkn = _tokenWriterSevice.GenerateGenericToken(sixDigitCode);
+                    await SaveVerificationCode(auth.UserAccount_Id, 0, tkn);
+                }
 
                 var user = new UserAccountViewModel
                 {
-                    Id = auth.UserAccount_Id,
-                    Name = auth.UserAccount.FirstName,
-                    Token = tkn
+                   Id = auth.UserAccount_Id,
+                   Name = auth.UserAccount.FirstName,
+                   Token = tkn
                 };
 
                 return user;
             }
-            throw new UnauthorizedAccessException("Code is invalid");
+            throw new UnauthorizedAccessException("Invalid Code");
+        }
+
+        public async Task<UserAccountViewModel> ChangePassword(UserRecoveryViewModel user)
+        {
+            UserAccountValidation.ValidPassword(user.Password);
+
+            var code = await _tokenManagerData.GetActiveVerificationCodeByToken(user.Token, true);
+
+            if(code != null && code.IsActive == false)
+            {
+                throw new BadRequest("Invalid request");
+            }
+
+            var account = await _userAccountData.GetUserActiveById(code.UserAccount_Id, true);
+
+            if (account == null)
+            {
+                throw new ResourceNotFound("Resource not found");
+            }
+
+            var salt = _tokenWriterSevice.GenerateSalt();
+            var password = _tokenWriterSevice.Hashed(user.Password,salt);
+
+            code.IsActive = false;
+            account.Salt = salt;
+            account.Password = password;
+
+            await _userAccountData.SaveChanges();
+
+            string tkn = _tokenWriterSevice.GenerateJwtToken(account.Id, $"{account.FirstName} {(account.MiddleName != "" ? $"{account.MiddleName[0]}." : "")} {account.LastName}");
+
+            return new UserAccountViewModel
+            {
+                Id = account.Id,
+                Name = account.FirstName,
+                Token = tkn
+            };
         }
 
         public async Task Logout(HttpContext context, int id)
@@ -260,11 +380,10 @@ namespace SimpLedger.Repository.Services.Account
                 IsActive = true
             };
 
-            _context.Add(blackListToken);
-            await _context.SaveChangesAsync();
+            await _tokenManagerData.Save(blackListToken);
         }
 
-        public Task IsBlackListed(HttpContext context) 
+        public async Task IsBlackListed(HttpContext context) 
         {
             var user = context.Request.Headers.Cookie.ToString();
 
@@ -276,13 +395,27 @@ namespace SimpLedger.Repository.Services.Account
 
                 if (handler.CanReadToken(token))
                 {
-                    var jwtToken = handler.ReadJwtToken(token);
-                    jti = jwtToken.Claims.FirstOrDefault(j => j.Type == "jti")?.Value;
+                    try
+                    {
+                        var jwtToken = handler.ReadJwtToken(token);
+                        jti = jwtToken.Claims.FirstOrDefault(j => j.Type == "jti")?.Value;
+
+                    }
+                    catch (Exception ex)
+                    {
+                        context.Response.Cookies.Delete("AccessToken");
+                        throw new UnauthorizedAccessException("Unauthorize Access");
+                    }
+                }
+                else
+                {
+                    context.Response.Cookies.Delete("AccessToken");
+                    throw new UnauthorizedAccessException("Unauthorize Access");
                 }
 
                 if (!string.IsNullOrEmpty(jti))
                 {
-                    bool isBlackListed = _context.ExpiredTokens.AsNoTracking().Any(j => j.Jti == jti);
+                    bool isBlackListed = await _tokenManagerData.GetExpiredJwtToken(jti);
 
                     if (isBlackListed)
                     {
@@ -291,7 +424,7 @@ namespace SimpLedger.Repository.Services.Account
                     }
                 }
             }
-            return Task.CompletedTask;
+            return;
         }
     }
 }
